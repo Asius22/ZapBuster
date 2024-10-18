@@ -1,0 +1,14 @@
+Pizzeria
+Tris
+iOS
+meta
+tags
+icons
+Favicon
+This
+script
+adds
+the
+flutter
+initialization
+code
