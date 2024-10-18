@@ -1,7 +1,7 @@
 
-from zap_functions import ZAP
-import dirb_function as df
-from cewl_function import launch_cewl as cewl
+from zap_wrapper import ZAPWrapper
+import dirb_wrapper as df
+from cewl_wrapper import launch_cewl as cewl
 import argparse, sys, os
 from utility import merge_wordlist
 
@@ -33,7 +33,7 @@ zap.print_report()
 connection.close()
 
 """
-def analyze_urls_from_file(zap, file):
+def analyze_urls_from_file(zap: ZAPWrapper, file):
     try: 
         with open(file, "r") as urls_file:
             # importa gli url all'interno del context di zap
@@ -49,8 +49,12 @@ def analyze_urls_from_file(zap, file):
     zap.zap_print_report() #stampa il report
 
 
-def analyze_url(zap, url, aggressive, ajax, ):
+def analyze_url(zap: ZAPWrapper, url, aggressive, ajax, ):
     print(f"Analyzing url {url} aggressive = {aggressive} ajax = {ajax}")
+    
+    if ajax:
+        zap.start_ajax_spider(url)
+    
     if aggressive:
         # crea una custom wordlist
         wordlist = cewl(url)
@@ -61,11 +65,11 @@ def analyze_url(zap, url, aggressive, ajax, ):
 def main():
     parser = argparse.ArgumentParser(description="Analizzatore di URL")
     parser.add_argument("-u","--url", help="URL da analizzare", required=False)
-    parser.add_argument("--aggressive-mode", help="Modalità di scansione", action="store_true") #true se specificato, false altrimenti
     parser.add_argument("-f","--file", help="File contenente gli URL da analizzare", )
-    parser.add_argument("--ajax", help="Usa spiderAjax per l'analisi", action="store_true") #true se specificato, false altrimenti
     parser.add_argument("--proxy", help="<address:port>\t\tSpecifica il proxy da utilizzare ", required=False) #true se specificato, false altrimenti
-    
+    parser.add_argument("--aggressive-mode", help="Avvia in modaliità aggressiva", action="store_true") #true se specificato, false altrimenti
+    parser.add_argument("--ajax", help="Usa spiderAjax per l'analisi (for modern app)", action="store_true") #true se specificato, false altrimenti
+    parser.add_argument("--report", help="Specifica il proxy da utilizzare ", required=False, type=str, default="html", choices=["html, json, xml"]) 
     args = parser.parse_args()
     
     if not args.url and not args.file:
@@ -73,7 +77,7 @@ def main():
         print("Devi specificare almeno un URL (--url) o un file di URL (--file).")
         sys.exit(1)
     
-    zap = ZAP(proxy=args.proxy)
+    zap = ZAPWrapper(proxy=args.proxy)
     
     if args.url:    
         analyze_url(zap, args.url, args.aggressive_mode, args.ajax)
