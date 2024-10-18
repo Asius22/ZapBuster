@@ -1,0 +1,1 @@
+"ffuf -u <url> -w <wordlist> -sf -noninteractive -x <proxy>  -s" 

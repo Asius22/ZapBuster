@@ -43,6 +43,14 @@ def merge_wordlist(file1, file2, output):
         ordina le righe
         cancella i duplicati
         l"output finale stampalo in output
+        
+    Args:
+        file1 (str): path del primo file
+        file2 (str): path del secondo file
+        output (str): path del file in cui inserire l'unione dei due file
+        
+    Result:
+        output (str): parh del file id output
     """
     # Primo step: `cat file1 file2`
     result1 = subprocess.run(["cat", file1, file2], stdout=subprocess.PIPE, text=True)
@@ -53,4 +61,6 @@ def merge_wordlist(file1, file2, output):
     # Terzo step: `uniq`, che prende l"output del secondo step e scrive nel file output.txt
     with open(output, "w") as output_file:
         subprocess.run(["uniq"], input=result2.stdout, stdout=output_file, text=True)
+        
+    return output
 
