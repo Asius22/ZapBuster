@@ -4,6 +4,7 @@ import time
 import os
 import logging
 import xml.etree.ElementTree as ET
+import psutil
 from zapv2 import ZAPv2
 
 
@@ -50,7 +51,9 @@ class ConnectionManager:
             while not self._is_zap_running_():
                 logging.info("In attesa che ZAP si avvii...")
                 time.sleep(TIME_TO_WAIT)
-        logging.info("Connessione stabilita")
+        else:
+            self.process = find_zap_daemon_pid()
+        print(f"Connessione stabilita {self.process}")
             
         
     def connect(self):
@@ -64,5 +67,23 @@ class ConnectionManager:
         subprocess.run(["kill", "-9", f"{self.process}"])
         logging.info("Processo terminato.")
 
+    
+def find_zap_daemon_pid():
+    for process in psutil.process_iter(['pid', 'name', 'cmdline']):
+        try:
+            # Ottieni il nome e la riga di comando del processo
+            name = process.info['name']
+            cmdline = process.info['cmdline']
+            
+            # Verifica se il processo si riferisce a OWASP ZAP
+            if name.lower() == 'java' and any('zap' in arg.lower() for arg in cmdline):
+                # Verifica se il processo è il daemon di ZAP (controlla la presenza di `-daemon`)
+                if any('-daemon' in arg.lower() for arg in cmdline):
+                    return process.info['pid']
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            # Ignora i processi che non sono più disponibili
+            continue
+    
+    return None
 
 

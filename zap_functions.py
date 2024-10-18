@@ -15,6 +15,8 @@ def zap_start_spider(url):
         time.sleep(0.5)
 
     print('\nSpider has completed!')
+    for res in zap.spider.results(scanID):
+        print(res)
 
 
 def zap_start_ajax_spider(url):
@@ -71,3 +73,7 @@ def zap_print_report():
         report_file.write(report)
     print("Report creato!!")
     subprocess.Popen(["firefox", REPORT_NAME])
+
+
+def termZap():
+    connection.close()

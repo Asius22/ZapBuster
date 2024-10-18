@@ -27,8 +27,6 @@ def waiting_print(str):
         print(f"\r{str} {". " * (i + 1)} ", end="")
 
         time.sleep(0.5)
-        
-    print("")
 
 def progress_print(process, progress):
     
