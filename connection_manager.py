@@ -11,12 +11,12 @@ from zapv2 import ZAPv2
 TIME_TO_WAIT = 2
 
 class ConnectionManager:
-    def __init__(self):
+    def __init__(self, proxy):
         # Configurazioni ZAP
         self.zap_host = "127.0.0.1"
         self.zap_port = "8080"
         self.zap_url = f"http://{self.zap_host}:{self.zap_port}"
-
+        self.proxy = proxy
         self.zap_config_path = os.path.expanduser("~/.ZAP")
 
         tree = ET.parse(os.path.join(self.zap_config_path, "config.xml"))
@@ -25,7 +25,7 @@ class ConnectionManager:
         self.process = None
         self.zap = None
         self.connect()
-        
+
 
     def get_zap_api_key(self):
         return self.zap_api_key
@@ -43,10 +43,20 @@ class ConnectionManager:
     # Funzione per avviare ZAP in modalità headless
     def _start_zap_(self):
         args = ["zaproxy", "-daemon", "-host", self.zap_host, "-port", self.zap_port, f"-config", f"api.key={self.zap_api_key}"]
+        
+        if self.proxy :
+            address, port = self.proxy.split(':')
+            args.append("-config")
+            args.append(f"proxy.address={address}")
+            args.append("-config")
+            args.append(f"proxy.port={port}")
+        
         logging.info("Avvio dei processi di background...")
+        
         if not self._is_zap_running_():
             logging.info("Avvio di ZAP in modalità headless...")
-            self.process = subprocess.Popen(args, stdout=subprocess.DEVNULL, start_new_session=True ).pid
+            self.process = subprocess.Popen(args, stdout=subprocess.DEVNULL, start_new_session=True, text=False, ).pid
+            
             # Attendi che ZAP si avvii completamente
             while not self._is_zap_running_():
                 logging.info("In attesa che ZAP si avvii...")
@@ -54,13 +64,13 @@ class ConnectionManager:
         else:
             self.process = find_zap_daemon_pid()
         print(f"Connessione stabilita {self.process}")
-            
-        
+
+
     def connect(self):
         self._start_zap_()
-        self.zap = ZAPv2(apikey=self.zap_api_key)
+        self.zap = ZAPv2(apikey=self.zap_api_key, )
 
-        
+
     def close(self):
         logging.info("Sto terminando il processo...")
         print("Sto terminando il processo...")
@@ -83,7 +93,6 @@ def find_zap_daemon_pid():
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
             # Ignora i processi che non sono più disponibili
             continue
-    
     return None
 
 
