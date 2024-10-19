@@ -25,10 +25,10 @@ def waiting_print(str):
         print("\r" + " " * 50 , end="")
         print(f"\r{str} {". " * (i + 1)} ", end="")
 
-        time.sleep(0.5)
+        time.sleep(0)
 
 def progress_print(process, progress):
-    
+    progress = round(float(progress), 2)
     print("\r" + " " * 50 , end="")
     print(f"\r{process}: {progress}% ", end="")
     if progress == "100":

@@ -1,45 +1,69 @@
 import subprocess
 from utility import waiting_print, extract_url_from_file
+import sys
 
-import time
-"feroxbuster -u <URL> -A -x pdf,js,html,php,txt,json,docx -k -d 0 -w <wordlist da usare> -E -B -g -p --silent"
+"feroxbuster -u <URL> -A -x pdf,js,html,php,txt,json,docx -k -d 0 -w <wordlist da usare> -E -B -g --silent"
 
 
-def launch_ferox(url, wordlist, proxy=None):
-    """
+
+def launch_ferox(url:str, wordlist:str, recursion_depth=None, proxy=None ):
+    """ launch feroxbuster with following flags:
+    \n-A: random user agent
+    \n-x pdf,js,html,php,txt,json,docx: search for file with specified extension
+    \n-d 0: whith infinite recursion
+    \n-w: wordlist to use
+    \n-E: Automatically discover extensions and add them to --extensions
+    \n-p: (optional) the proxy to use 
 
     Args:
         url (str): Url to scan
         wordlist (str): /path/to/wordlist
         proxy (str, optional): address:port . Defaults to None.
-    Result:
+
+    Returns:
         res (set of strings): a list of all url finded by ferox process
     """
-    if url is None:
-        print("[FEROX] url cannot none")
-        return
-    if wordlist is None:
+
+    if url == "":
+        print("[FEROX] url cannot empty")
+        sys.exit(1)
+
+    if wordlist == "":
         print("[FEROX] Wordlist cannot be none")
-        return 
+        sys.exit(1)
+
     output = "tmp.txt"
-    args = ["feroxbuster", "-u", url, "-A", "-x", "pdf,js,html,php,txt,json,docx", "-k", "-d","0", "-w", wordlist, "-E", "-B", "-g", "-o", output, "--silent"]
-    
+    args = ["feroxbuster", "-u", url, "-A", "-x", "pdf,js,html,php,txt,json,docx", "-k", "-w", wordlist, "-E",
+            #"-o", output,
+            "-s", "200", "301", "--silent"]  
+
+    for s in args:
+        print(s, end=" ")
+    print("")
     if proxy:
         args.append("-p")
         args.append(proxy)
-    
-    process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL, text=True)
-    start = time.time()
-    while process.poll() is None:
-        waiting_print("Scanning site")
-        if time.time() < start + 60 * 2:
-            process.kill()
-            break;
-    
-    res = extract_url_from_file(output)
-    subprocess.call(["rm", "-f", output])
+    if recursion_depth is not None:
+        args.append("-d")
+        args.append(recursion_depth)
+
+    process = subprocess.Popen(args, stdout=subprocess.PIPE, stdin=subprocess.DEVNULL, text=True)
+    res = set()
+    for line in process.stdout:
+        if line.strip() != "":
+            res.add(line)
+            print(line)
+        else:
+            print("Scanning")
+
+    process.wait()
+    #res = extract_url_from_file(output)
+    #subprocess.call(["rm", "-f", output])
+
     print("processo terminato")
     return res
 
 if __name__=="__main__":
-    launch_ferox("iltrispizzeria.it", "./wordlists/cewl_iltrispizzeria_it.txt")
+    res = launch_ferox("http://127.0.0.1:42001/", "./wordlists/cewl_iltrispizzeria_it.txt")
+    for r in res:
+        print(r)

@@ -7,35 +7,10 @@ from zap_wrapper import ZAPWrapper
 from utility import merge_wordlist, waiting_print
 from cewl_wrapper import launch_cewl as cewl
 
-
-TARGET = "https://public-firing-range.appspot.com"
-SECLIST_WL="/usr/share/seclists/Discovery/Web-Content/big.txt"
-
-"""
-
-#TARGET = "https://iltrispizzeria.it"
-
-custom_wordlist = cewl(TARGET)
+SECLIST_WL="/usr/share/seclists/Discovery/Web-Content/common.txt"
 
 
-
-zap.start_spider(TARGET)
-
-dirb_urls = df.start_dirb(TARGET)
-zap.insert_url_in_context(dirb_urls)
-zap.start_ajax_spider(TARGET)
-
-
-zap.start_ascan()
-zap.print_report()
-
-
-
-
-connection.close()
-
-"""
-def analyze_urls_from_file(zap: ZAPWrapper, file):
+def analyze_urls_from_file(zap: ZAPWrapper, file, url=None, ajax=False):
     try: 
         with open(file, "r") as urls_file:
             # importa gli url all'interno del context di zap
@@ -44,57 +19,67 @@ def analyze_urls_from_file(zap: ZAPWrapper, file):
                     zap.insert_url_in_context(line)
                 else:
                     print(f"line:\n\t{line}\n not analyzed cause it seems to not be an url")
+            if url is not None:
+                if ajax:
+                    zap.start_ajax_spider(url)
+                zap.start_spider(url)
+            
             zap.start_ascan() #avvia il vulnerability mapping
     except OSError:
         print(f"[Error] Could not open {file}")
         
     zap.print_report() #stampa il report
+    zap.termZap()
 
 
-def analyze_url(zap: ZAPWrapper, url, aggressive, ajax, proxy=None):
-    print(f"Analyzing url {url} aggressive = {aggressive} ajax = {ajax}")
-
-
-    
+def analyze_url( url, aggressive, ajax, custom_wordlist, recursion_depth, proxy=None):
     if aggressive:
+
         # crea una custom wordlist
         wordlist = cewl(url)
         # uniscila con la wordlist base
-        wordlist = merge_wordlist(wordlist, SECLIST_WL, wordlist)
-        print(f"##########{wordlist}")
+        wordlist = merge_wordlist(wordlist, custom_wordlist or SECLIST_WL, wordlist)
         
         url_scanned = set()
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        #with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        
+        print("Avvio ferox...")
+        url_scanned.update(fw.launch_ferox(url=url, wordlist=wordlist, proxy=proxy, recursion_depth=recursion_depth))
+        print("FeroxBuster Terminato!")
+        
+        zap = ZAPWrapper(proxy=proxy)
+        if ajax:
+            print("Avvio di ajax spider...")
 
-            ferox_future = executor.submit(fw.launch_ferox(url=url, wordlist=wordlist, proxy=proxy)) 
-            ajax_future = executor.submit(zap.start_ajax_spider(url))
-            
+            zap.start_ajax_spider(url)
+            print("Ajax spider completo!")
+
         # Avvia il waiting future
         # ... altri future
-        print("Scanning")
-        
-        for future in concurrent.futures.as_completed([ferox_future, ajax_future]):
-            try:
-                result = future.result()
-                    
-                if isinstance(result, list):
-                    url_scanned.update(set(result))
-            except:
-                print("Errore durante lo scanning")
         
         print("Scanning terminato")
+        print("Inizio preparativi per Active scan")
         for url in url_scanned:
             zap.insert_url_in_context(url)
+        print("Inizio active scan")
+        zap.start_ascan()
+        zap.print_report()
+        zap.termZap()
     else:
+        zap = ZAPWrapper(proxy=proxy)
         zap.start_spider(url)
         if ajax:
             zap.start_ajax_spider(url)
 
+
 def main():
-    parser = argparse.ArgumentParser(description="Analizzatore di URL")
+    parser = argparse.ArgumentParser(description="Analizzatore di URL", 
+                prog="main.py", usage="%(prog)s -u URL [option]", formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("-u","--url", help="URL da analizzare", required=False)
-    parser.add_argument("-f","--file", help="File contenente gli URL da analizzare", )
+    parser.add_argument("-f","--file", help="File contenente gli URL da analizzare", required=False)
+    parser.add_argument("-w","--wordlist", help="Wordlist di base da usare per la scansione", required=False)
+    parser.add_argument("--recursion-depth", help="Abilita la ricerca ricorsiva e specifica quanto deve andare in profondità (0 = infinita, )", type=int, required=False) #true se specificato, false altrimenti
     parser.add_argument("--proxy", help="<address:port>\t\tSpecifica il proxy da utilizzare ", required=False) #true se specificato, false altrimenti
     parser.add_argument("--aggressive-mode", help="Avvia in modaliità aggressiva (molto lenta)", action="store_true") #true se specificato, false altrimenti
     parser.add_argument("--ajax", help="Usa spiderAjax per l'analisi (for modern app)", action="store_true") #true se specificato, false altrimenti
@@ -105,16 +90,25 @@ def main():
         parser.print_help()
         print("Devi specificare almeno un URL (--url) o un file di URL (--file).")
         sys.exit(1)
-    
-    zap = ZAPWrapper(proxy=args.proxy)
-    
+    print(f"\n\nURL: {args.url}")
+    print(f"FILE: {args.file}")
+    print(f"RECURSION_DEPTH: {args.recursion_depth}")
+    print(f"PROXY: {args.proxy}")
+    print(f"AGGRESSIVE_MODE: {args.aggressive_mode}")
+    print(f"AJAX: {args.ajax}")
+    print(f"WORDLIST: {args.wordlist or SECLIST_WL}")
+    print(f"REPORT: {args.report}\n\n")
+
+    if not args.url.startswith("http"):
+        args.url = f"http://{args.url}"
+        print(args.url)
+
     if args.url:    
-        analyze_url(zap, args.url, args.aggressive_mode, args.ajax, args.proxy)
+        analyze_url( args.url, args.aggressive_mode, args.ajax, args.proxy, args.recursion_depth, args.wordlist)
     
     if args.file:
-        analyze_urls_from_file(zap, args.file)
-        
-    zap.termZap()
+        analyze_urls_from_file(ZAPWrapper(proxy=args.proxy), args.file)
+  
 
 
 if __name__ == "__main__":

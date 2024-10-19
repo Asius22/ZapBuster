@@ -3,6 +3,7 @@ import subprocess
 import connection_manager as CM
 from utility import progress_print
 
+TIMEOUT = 60*2
 class ZAPWrapper:
     def __init__(self, proxy):
         self.connection = CM.ConnectionManager(proxy = proxy)
@@ -14,17 +15,15 @@ class ZAPWrapper:
         while int(self.zap.spider.status(scanID)) < 100:
             # Poll the status until it completes
             progress_print(process="ZAP SPIDER", progress=self.zap.spider.status(scanID))
-            time.sleep(0.5)
+            time.sleep(0.3)
 
         print('\nSpider has completed!')
-        for res in self.zap.spider.results(scanID):
-            print(res)
 
 
     def start_ajax_spider(self, url):
         scanID = self.zap.ajaxSpider.scan(url)
 
-        timeout = time.time() + 60*2   # 2 minutes from now
+        timeout = time.time() + TIMEOUT   # 2 minutes from now
         # Loop until the ajax spider has finished or the timeout has exceeded
         while self.zap.ajaxSpider.status == 'running':
             if time.time() > timeout:
@@ -37,12 +36,19 @@ class ZAPWrapper:
         self.zap.ajaxSpider.results()
         
     def insert_url_in_context(self, urls):
+        n_urls = len(urls)
+        url_addedd = 0
         for url in urls:
+            progress_print("Adding urls in zap context", progress=url_addedd/n_urls)
             self.zap.core.access_url(url, followredirects=None)
+            url_addedd+=1
+
 
     def get_nodes(self, url):
         for node in self.zap.core.child_nodes(self, url):
             print (node)
+
+
     # Inserisce la lista di url nel contesto di zap e procede con la scansione delle anomalie
     def start_ascan(self, urls = []):
 
