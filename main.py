@@ -3,6 +3,7 @@ import argparse, sys
 import threading
 import concurrent.futures
 import ferox_wrapper as fw
+from pathlib import Path
 from zap_wrapper import ZAPWrapper
 from utility import merge_wordlist, waiting_print
 from cewl_wrapper import launch_cewl as cewl
@@ -11,24 +12,16 @@ SECLIST_WL="/usr/share/seclists/Discovery/Web-Content/common.txt"
 
 
 def analyze_urls_from_file(zap: ZAPWrapper, file, url=None, ajax=False):
-    try: 
-        with open(file, "r") as urls_file:
-            # importa gli url all'interno del context di zap
-            for line in urls_file.readlines():
-                if line.startswith("https://") or line.startswith("http://"):
-                    zap.insert_url_in_context(line)
-                else:
-                    print(f"line:\n\t{line}\n not analyzed cause it seems to not be an url")
-            if url is not None:
-                if ajax:
-                    zap.start_ajax_spider(url)
-                zap.start_spider(url)
-            
-            zap.start_ascan() #avvia il vulnerability mapping
-    except OSError:
-        print(f"[Error] Could not open {file}")
-        
-    zap.print_report() #stampa il report
+    
+    zap.import_url_from_file(file)
+    for site in zap.get_sites():
+        zap.start_spider(site)
+    if ajax:
+        for site in zap.get_sites():
+            zap.start_ajax_spider(site)
+    zap.start_ascan() #avvia il vulnerability mapping
+    """
+    zap.print_report() #stampa il report"""
     zap.termZap()
 
 
@@ -101,15 +94,19 @@ def main():
 
 
 
-    if args.url:   
+    """if args.url:   
         if not args.url.startswith("http"):
             args.url = f"http://{args.url}"
             print(args.url) 
-        analyze_url( args.url, args.aggressive_mode, args.ajax, args.proxy, args.recursion_depth, args.wordlist)
+        analyze_url( args.url, args.aggressive_mode, args.ajax, args.proxy, args.recursion_depth, args.wordlist)"""
     
     if args.file:
-        analyze_urls_from_file(ZAPWrapper(proxy=args.proxy), args.file)
-  
+        path = Path(args.file)
+        if path.is_file():
+            # avvia analyze_from_file con il path assoluto
+            analyze_urls_from_file(ZAPWrapper(proxy=args.proxy), path.resolve())
+        else:
+            print(f"Impossibile trovare il file {path.resolve()}")
 
 
 if __name__ == "__main__":

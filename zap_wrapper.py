@@ -1,6 +1,7 @@
 import time
-import subprocess
+import subprocess, os
 import connection_manager as CM
+import concurrent.futures 
 from utility import progress_print
 
 TIMEOUT = 60*2
@@ -33,31 +34,56 @@ class ZAPWrapper:
             time.sleep(0.5)
 
         print('\nAjax Spider completed')
-        self.zap.ajaxSpider.results()
-        
-    def insert_url_in_context(self, urls):
-        n_urls = len(urls)
-        url_addedd = 0
-        for url in urls:
-            progress_print("Adding urls in zap context", progress=url_addedd/n_urls)
-            self.zap.core.access_url(url, followredirects=None)
-            url_addedd+=1
 
+
+    def import_url_from_file(self, filepath):
+        print(f"importo il file {filepath}")
+        self.zap.exim.import_urls(filepath)
+        for site in self.zap.core.sites:
+            self.get_nodes(site)
+
+
+    def insert_url_in_context(self, urls):
+        """Insert a set of urls inside the zap context
+
+        Args:
+            urls (set_of_strings): the set of urls to insert inside zap context
+        """
+        
+        n_urls = len(urls)
+        url_added = 0
+        self.zap.core
+        # Determine optimal number of threads
+        max_workers = max(32, os.cpu_count() * 10)  
+        def access_url(url):
+            self.zap.core.access_url(url, followredirects=None)
+            self.zap.urlopen(url)
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = [executor.submit(access_url, url) for url in urls]
+            for future in concurrent.futures.as_completed(futures):
+                url_added += 1
+                #rogress_print("Adding urls in zap context", progress=n_urls/url_added)
+
+        self.get_nodes(self.zap.core.sites[0])
+   
 
     def get_nodes(self, url):
-        for node in self.zap.core.child_nodes(self, url):
+        for node in self.zap.core.child_nodes(url):
             print (node)
+        print(len(self.zap.core.child_nodes(url)))
 
-
+    def get_sites(self):
+        return self.zap.core.sites
     # Inserisce la lista di url nel contesto di zap e procede con la scansione delle anomalie
     def start_ascan(self, urls = []):
 
         if len(urls) != 0:
             self.insert_url_in_context(urls)
-        
+        print(f"Avvio active scan {self.zap.core.sites}")
         for site in self.zap.core.sites:
             
-            scanID = self.zap.ascan.scan(site)
+            scanID = self.zap.ascan.scan(site, recurse=True)
 
             try:
                 while int(self.zap.ascan.status(scanID)) < 100:
@@ -69,7 +95,7 @@ class ZAPWrapper:
                 print("[ValueError] Si è verificato un errore con l'ActiveScan...")
                 print(f"scanID: {scanID}")
                 print("Chiusura")
-                self.connection.close()
+                self.connection.close() 
 
             # Print vulnerabilities found by the scanning
 
