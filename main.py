@@ -99,11 +99,12 @@ def main():
     print(f"WORDLIST: {args.wordlist or SECLIST_WL}")
     print(f"REPORT: {args.report}\n\n")
 
-    if not args.url.startswith("http"):
-        args.url = f"http://{args.url}"
-        print(args.url)
 
-    if args.url:    
+
+    if args.url:   
+        if not args.url.startswith("http"):
+            args.url = f"http://{args.url}"
+            print(args.url) 
         analyze_url( args.url, args.aggressive_mode, args.ajax, args.proxy, args.recursion_depth, args.wordlist)
     
     if args.file:
