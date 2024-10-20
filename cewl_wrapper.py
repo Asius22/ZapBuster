@@ -23,7 +23,6 @@ def get_output_file_name(url):
 
 def launch_cewl(url):
     """_summary_
-
     Args:
         url (string): l'url da analizzare per creare la wordlist
 
@@ -32,14 +31,21 @@ def launch_cewl(url):
     """
     output_path = os.path.join(WL_PREFIX, get_output_file_name(url))
 
-    if not os.path.exists(output_path):
-        args = ["cewl", "-w", f"{output_path}", "--meta", url]
-        process = subprocess.Popen(args, stdout=subprocess.DEVNULL,)
+    if os.path.exists(output_path):
+
+        choice = input("Esiste già una wordlist per questo url, vuoi sovrascriverla? (y/N)")
+        while choice.lower() not in ["y", "n"]:
+            choice = input("Risposta non valida. Vuoi sovrascriverla? (y/N)")
+            print("rispondere solo con y o n")
         
-        while process.poll() is None:
-            waiting_print("Analyzing site")
-            time.sleep(1)
-        print("")
+        if choice.lower() ==  "y":
+            args = ["cewl", "-w", f"{output_path}", "--meta", url]
+            process = subprocess.Popen(args, stdout=subprocess.DEVNULL,)
+            
+            while process.poll() is None:
+                waiting_print("Analyzing site")
+                time.sleep(1)
+            print("")
         
     return output_path
 

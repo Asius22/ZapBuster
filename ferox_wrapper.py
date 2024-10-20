@@ -6,7 +6,7 @@ import sys
 
 
 
-def launch_ferox(url:str, wordlist:str, recursion_depth=None, proxy=None ):
+def launch_ferox(url:str, wordlist:str, recursion_depth:str | None = None, proxy=None ):
     """ launch feroxbuster with following flags:
     \n-A: random user agent
     \n-x pdf,js,html,php,txt,json,docx: search for file with specified extension
@@ -27,26 +27,26 @@ def launch_ferox(url:str, wordlist:str, recursion_depth=None, proxy=None ):
     if url == "":
         print("[FEROX] url cannot empty")
         sys.exit(1)
-
+        
     if wordlist == "":
         print("[FEROX] Wordlist cannot be none")
         sys.exit(1)
+        
+    args = ["feroxbuster", "-u", url, "-A", "-x", "pdf,js,html,php,txt,json,docx", "-k", "-w", wordlist, "-E", "-s", "200", "301", "--silent"]  
+    
 
-    output = "tmp.txt"
-    args = ["feroxbuster", "-u", url, "-A", "-x", "pdf,js,html,php,txt,json,docx", "-k", "-w", wordlist, "-E",
-            #"-o", output,
-            "-s", "200", "301", "--silent"]  
-
-    for s in args:
-        print(s, end=" ")
-    print("")
+    
     if proxy:
         args.append("-p")
         args.append(proxy)
     if recursion_depth is not None:
         args.append("-d")
         args.append(recursion_depth)
-
+        
+    # stampa la stringa da lancaire
+    for s in args:
+        print(s, end=" ")
+    print("")
     process = subprocess.Popen(args, stdout=subprocess.PIPE, stdin=subprocess.DEVNULL, text=True)
     res = set()
     for line in process.stdout:
