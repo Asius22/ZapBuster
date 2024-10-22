@@ -1,5 +1,4 @@
 import subprocess
-from utility import waiting_print, extract_url_from_file
 import sys
 
 def launch_ferox(url:str, wordlist:str, recursion_depth:str | None = None, proxy=None ):

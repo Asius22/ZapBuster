@@ -1,6 +1,4 @@
 import subprocess
-import time
-
 import utility as UT
 
 WORD_LIST = "/usr/share/wordlists/dirb/common.txt"

@@ -1,7 +1,5 @@
 
 import argparse, sys
-import threading
-import concurrent.futures
 import ferox_wrapper as fw
 from pathlib import Path
 from zap_wrapper import ZAPWrapper
