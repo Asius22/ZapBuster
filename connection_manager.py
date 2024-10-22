@@ -11,6 +11,8 @@ from zapv2 import ZAPv2
 TIME_TO_WAIT = 2
 
 class ConnectionManager:
+    """An object used to manage the connection with zap process
+    """
     def __init__(self, proxy):
         # Configurazioni ZAP
         self.zap_host = "127.0.0.1"
@@ -63,7 +65,6 @@ class ConnectionManager:
                 time.sleep(TIME_TO_WAIT)
         else:
             self.process = find_zap_daemon_pid()
-        print(f"Connessione stabilita {self.process}")
 
 
     def connect(self):
@@ -79,6 +80,11 @@ class ConnectionManager:
 
     
 def find_zap_daemon_pid():
+    """used to find the zap pid if zap is already running when [Program] is been started
+
+    Returns:
+        str | None: the pid finded or None
+    """
     for process in psutil.process_iter(['pid', 'name', 'cmdline']):
         try:
             # Ottieni il nome e la riga di comando del processo

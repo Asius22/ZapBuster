@@ -8,7 +8,6 @@ OUTPUT_FILE = "dirb_out.txt"
 
 # Avvia dirb su una wordlist comune se non specificata un'altra
 def start_dirb(target, wordlist = WORD_LIST):
-    res = set()
     args = ["dirb",target ,wordlist, "-o", OUTPUT_FILE, "-N 404", ]
     
     process = subprocess.Popen(args, start_new_session=True, stdout=subprocess.DEVNULL, )
