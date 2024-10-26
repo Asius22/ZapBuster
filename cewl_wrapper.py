@@ -2,7 +2,7 @@ import subprocess
 import os, time
 from utility import waiting_print
 
-TARGET = "https://iltrispizzeria.it"
+
 WL_PREFIX="./wordlists"
 
 
@@ -39,7 +39,7 @@ def launch_cewl(url):
             print("rispondere solo con y o n")
                     
         if choice.lower() ==  "y":
-            args = ["cewl", "-w", f"{output_path}", "--meta", url]
+            args = ["cewl", "-w", f"{output_path}", "--meta", "-d","10", url]
             process = subprocess.Popen(args, stdout=subprocess.DEVNULL,)
             
             while process.poll() is None:

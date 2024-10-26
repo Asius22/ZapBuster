@@ -9,7 +9,7 @@ class ZAPWrapper:
     def __init__(self, proxy=None):
         self.connection = CM.ConnectionManager(proxy = proxy)
         self.zap = self.connection.zap
-
+        #self.zap.network.add_rate_limit_rule("ZapBusterLimit", enabled=True, )
 
     def start_spider(self, url):
         scanID = self.zap.spider.scan(url)
@@ -68,17 +68,20 @@ class ZAPWrapper:
 
     # Inserisce la lista di url nel contesto di zap e procede con la scansione delle anomalie
     def start_ascan(self, urls = []):
+        scanner = self.zap.ascan
+        scanner.set_option_thread_per_host(20)
+        scanner.set_option_host_per_scan(3)
         if len(urls) != 0:
             self.insert_url_in_context(urls)
         print(f"Avvio active scan {self.zap.core.sites}")
         for site in self.zap.core.sites:
             
-            scanID = self.zap.ascan.scan(site, recurse=True)
+            scanID = scanner.scan(site, recurse=True)
             
             try:
-                while int(self.zap.ascan.status(scanID)) < 100:
+                while int(scanner.status(scanID)) < 100:
                     progress_print(process="[Active Scan]", progress=self.zap.ascan.status(scanID))
-                    time.sleep(5)
+                    time.sleep(10)
                     
                 print('\nActive Scan completed')
             except ValueError:
@@ -87,6 +90,7 @@ class ZAPWrapper:
                 print("Chiusura")
                 self.connection.close() 
             # Print vulnerabilities found by the scanning
+            time.sleep(1)
 
 
     def print_report(self, type:str = "html"):    

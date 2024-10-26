@@ -17,9 +17,9 @@ def analyze_urls_from_file(zap: ZAPWrapper, file:str, report_type:str, ajax:bool
     if ajax:
         for site in zap.get_sites():
             zap.start_ajax_spider(site)
-    zap.start_ascan() #avvia il vulnerability mapping
+    #zap.start_ascan() #avvia il vulnerability mapping
     
-    zap.print_report(report_type) #stampa il report
+    #zap.print_report(report_type) #stampa il report
     zap.termZap()
 
 
@@ -49,8 +49,6 @@ def analyze_url( url:str, aggressive: bool, ajax:bool, spider:bool, custom_wordl
         print("FeroxBuster Terminato!")
         
         zap = ZAPWrapper(proxy=proxy)
-        print("Avvio spider...")
-        zap.start_spider(url)
         
         if spider:
             print("Avvio lo spider...")

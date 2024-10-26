@@ -27,7 +27,7 @@ def launch_ferox(url:str, wordlist:str, recursion_depth:str | None = None, proxy
         print("[FEROX] Wordlist cannot be none")
         sys.exit(1)
         
-    args = ["feroxbuster", "-u", url, "-A", "-x", "pdf,js,html,php,txt,json,docx", "-k", "-w", wordlist, "-E", "-s", "200", "301","--no-state", "--silent"]  
+    args = ["feroxbuster", "-u", url, "-A", "-x", "pdf,js,html,php,txt,json,docx", "-k", "-r","-w", wordlist, "-E", "-g","-s", "200", "301", "401", "403", "405", "--no-state", "--silent"]  
     
     if proxy:
         args.append("-p")
@@ -39,11 +39,14 @@ def launch_ferox(url:str, wordlist:str, recursion_depth:str | None = None, proxy
         
     process = subprocess.Popen(args, stdout=subprocess.PIPE, stdin=subprocess.DEVNULL, text=True)
     res = set()
+    i = 0
     for line in process.stdout:
-        if line.strip().replace("\n", "") != "":
+        if line != "":
             res.add(line)
-            print(line)
-        else:
-            print("\r[Ferox] Scanning", end="")
+            sys.stdout.write(line.strip() + "\n")
+            i+=1
+            if i == 10:
+                sys.stdout.flush()
+                i = 0
     process.wait()
     return res
