@@ -9,70 +9,69 @@ from cewl_wrapper import launch_cewl as cewl
 SECLIST_WL="/usr/share/seclists/Discovery/Web-Content/common.txt"
 
 
-def analyze_urls_from_file(zap: ZAPWrapper, file:str, report_type:str, ajax:bool=False, ):
-    
-    zap.import_url_from_file(file)
-    for site in zap.get_sites():
-        zap.start_spider(site)
-    if ajax:
-        for site in zap.get_sites():
-            zap.start_ajax_spider(site)
-    #zap.start_ascan() #avvia il vulnerability mapping
-    
-    #zap.print_report(report_type) #stampa il report
-    zap.termZap()
-
-
-def analyze_url( url:str, aggressive: bool, ajax:bool, spider:bool, custom_wordlist:str | None, recursion_depth: str, report_type:str, proxy=None):
-    """Starts the analysis procedure starting with the creation of a custom wordlist using cewl, 
-    then there is the forced browsing step, using feroxbuster tool and [optional] ajax-spider and zap-spider (if relative flagss are setted)
-    and finally starts the active scan and print report scan 
+def analyze_urls_from_file(zap: ZAPWrapper, file:str, report_type:str, ajax:bool, spider:bool):
+    """Perform the vulnerability scanning stariting from a file of urls
 
     Args:
-        url (str): the url to analyze
-        aggressive (bool): specify if use other tools with zap ones
-        ajax (bool): specify in during aggressive procedure use also ajax spier
-        spider (bool): specify if during aggressive scan use also traditional zap spider
-        custom_wordlist (str | None): specify if use a custom wordlist with cewl one or use the standard one (common)
-        recursion_depth (str): Depth to spider to 
-        report_type (str): {html, json, xml} the output file expected
-        proxy (str, optional): the proxy string to use during analysis. Defaults to None.
+        zap (ZAPWrapper): the zap process to use
+        file (str): the ulrs file
+        report_type (str): {html, json, xml} the desidered report type
+        spider (bool): define the possibility to perform standard spidering
+        ajax (bool): define the possibility to perform ajax spidering
     """
-    if aggressive:
-        # crea una custom wordlist usande Cewl
-        wordlist = cewl(url)
-        # uniscila con la wordlist base
-        wordlist = merge_wordlist(wordlist, custom_wordlist or SECLIST_WL, wordlist)
-        # Inizia la scansione
-        print("Avvio FeroxBuster...")
-        url_scanned = fw.launch_ferox(url=url, wordlist=wordlist, proxy=proxy, recursion_depth=recursion_depth)
-        print("FeroxBuster Terminato!")
-        
-        zap = ZAPWrapper(proxy=proxy)
-        
-        if spider:
-            print("Avvio lo spider...")
-            zap.start_spider(url)
-            print("Spidering completo")
-        
-        if ajax:
-            print("Avvio di ajax spider...")
-            zap.start_ajax_spider(url)
-            print("Ajax spider completo!")
+    zap.import_url_from_file(file)
+    for site in zap.get_sites():
+        perform_spidering(zap, url=site, ajax=ajax, spider=spider)
+            
+    perform_vulnerability_scan(zap, report_type=report_type)
 
-        # Avvia il waiting future
-        # ... altri future
-        
-        print("Scanning terminato")
-        
-        print("Inizio preparativi per Active scan")
-        zap.insert_url_in_context(url_scanned)
-    else:
-        zap = ZAPWrapper(proxy=proxy)
-        zap.start_spider(url)
-        if ajax:
-            zap.start_ajax_spider(url)
-    
+def perform_ferox_crawl(url:str, custom_wordlist:str, proxy:str, recursion_depth:str):
+    """perform a first visit to create a wordlist based on the site itslef, then merge it with {custom_wordlist} 
+    or otherwise with the base wordlist (Seclists -> common.txt)
+
+    Args:
+        url (str): the url to crawl
+        custom_wordlist (str): define a custom wordlist to merge with the wordlist created 
+        proxy (str): (optional) the proxy to use
+        recursion_depth (str): (Default 4) how much deep to dig
+
+    Returns:
+        set: the urls finded
+    """
+    # crea una custom wordlist usande Cewl
+    wordlist = cewl(url)
+    # uniscila con la wordlist base
+    wordlist = merge_wordlist(wordlist, custom_wordlist or SECLIST_WL, wordlist)
+    # Inizia la scansione
+    print("Avvio FeroxBuster...")
+    url_scanned = fw.launch_ferox(url=url, wordlist=wordlist, proxy=proxy, recursion_depth=recursion_depth)
+    print("FeroxBuster Terminato!")
+    return url_scanned
+
+
+def perform_spidering(zap: ZAPWrapper, url:str, spider:bool=False, ajax:bool=False):
+    """perform spidering if ajax or spider are True
+    do nothing if both are False
+
+    Args:
+        zap (ZAPWrapper): the Zap wrapper
+        url (str): the url to spider
+        spider (bool, optional): define if perform the standard spidering. Defaults to False.
+        ajax (bool, optional): define if perform the ajax spidering. Defaults to False.
+    """
+    if spider:
+        zap.start_spider(url=url)
+    if ajax:
+        zap.start_ajax_spider(url)
+
+
+def perform_vulnerability_scan(zap: ZAPWrapper, report_type:str):
+    """Perform the vulnerability mapping of Zap
+
+    Args:
+        zap (ZAPWrapper): the zap wrapper
+        report_type (str): the report type desidered
+    """
     print("Inizio active scan")
     zap.start_ascan()
     print("Active scan concluso. Genero il report...")
@@ -111,16 +110,27 @@ def main():
     print(f"WORDLIST: {args.wordlist or SECLIST_WL}")
     print(f"REPORT: {args.report}\n\n")
     
+    zap = ZAPWrapper(proxy= args.proxy)
+    
     if args.url:   
-        if not args.url.startswith("http"):
+        if not args.url.startswith("http"): #check url form
             args.url = f"http://{args.url}"
-            print(args.url) 
-        analyze_url( url= args.url, aggressive= args.aggressive_mode, ajax= args.ajax,spider=args.spider, proxy= args.proxy, recursion_depth= args.recursion_depth, custom_wordlist= args.wordlist, report_type = args.report)
+            
+        if args.aggressive_mode:
+            zap.insert_url_in_context(
+                perform_ferox_crawl(url= args.url, proxy= args.proxy, recursion_depth= args.recursion_depth, custom_wordlist= args.wordlist,)
+            )
+
+        if args.ajax or args.spider:
+            perform_spidering(zap=zap, url=args.url, spider=args.spider, ajax=args.ajax)
+        
+        perform_vulnerability_scan(zap, report_type=args.report)
+        
     elif args.file:
         path = Path(args.file)
         if path.is_file():
             # avvia analyze_from_file con il path assoluto
-            analyze_urls_from_file(ZAPWrapper(proxy=args.proxy), path.resolve(), report_type = args.report)
+            analyze_urls_from_file(ZAPWrapper(proxy=args.proxy), path.resolve(), report_type = args.report, ajax=args.ajax, spider=args.spider)
         else:
             print(f"Impossibile trovare il file {path.resolve()}")
 

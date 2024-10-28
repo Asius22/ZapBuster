@@ -6,7 +6,6 @@ import logging
 import xml.etree.ElementTree as ET
 import psutil
 from zapv2 import ZAPv2
-import cpu_support as cpu
 
 
 TIME_TO_WAIT = 2
@@ -72,13 +71,11 @@ class ConnectionManager:
     def connect(self):
         self._start_zap_()
         self.zap = ZAPv2(apikey=self.zap_api_key, )
-        cpu.support_cpu(self.process, self.cgroup)
 
 
     def close(self):
         print("Sto terminando il processo...")
         subprocess.run(["kill", "-9", f"{self.process}"])
-        cpu.remove_cgroup(self.cgroup)
 
 
 def find_zap_daemon_pid():

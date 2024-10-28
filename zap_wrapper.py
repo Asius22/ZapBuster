@@ -4,7 +4,9 @@ import connection_manager as CM
 import concurrent.futures 
 from utility import progress_print
 
-TIMEOUT = 2
+THREADS = 40
+HOSTS = 2
+TIMEOUT = 0
 class ZAPWrapper:
     def __init__(self, proxy=None):
         self.connection = CM.ConnectionManager(proxy = proxy)
@@ -17,12 +19,14 @@ class ZAPWrapper:
             # Poll the status until it completes
             progress_print(process="ZAP SPIDER", progress=self.zap.spider.status(scanID))
             time.sleep(0.3)
+        progress_print(process="ZAP SPIDER", progress=100)
+
         print('\nSpider has completed!')
 
 
     def start_ajax_spider(self, url):
-        self.zap.ajaxSpider.set_option_max_duration(2)
-        self.zap.ajaxSpider.set_option_max_crawl_states(30)
+        self.zap.ajaxSpider.set_option_max_duration(TIMEOUT)
+        self.zap.ajaxSpider.set_option_max_crawl_states(20)
         self.zap.ajaxSpider.set_option_number_of_browsers(20)
                 
         self.zap.ajaxSpider.scan(url)
@@ -69,8 +73,9 @@ class ZAPWrapper:
     # Inserisce la lista di url nel contesto di zap e procede con la scansione delle anomalie
     def start_ascan(self, urls = []):
         scanner = self.zap.ascan
-        scanner.set_option_thread_per_host(20)
-        scanner.set_option_host_per_scan(3)
+        scanner.set_option_thread_per_host(THREADS)
+        scanner.set_option_host_per_scan(HOSTS)
+        
         if len(urls) != 0:
             self.insert_url_in_context(urls)
         print(f"Avvio active scan {self.zap.core.sites}")
@@ -82,7 +87,7 @@ class ZAPWrapper:
                 while int(scanner.status(scanID)) < 100:
                     progress_print(process="[Active Scan]", progress=self.zap.ascan.status(scanID))
                     time.sleep(10)
-                    
+                progress_print(process="[Active Scan]", progress=100)
                 print('\nActive Scan completed')
             except ValueError:
                 print("[ValueError] Si è verificato un errore con l'ActiveScan...")
