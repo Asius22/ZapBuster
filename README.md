@@ -45,14 +45,26 @@ python main.py -u URL [options]
 
 ### Options
 
-- `-u, --url URL`: Specify the URL to analyze (entire associated domain will be scanned)
-- `-f, --file FILE`: Provide a file containing URLs to analyze
-- `-w, --wordlist WORDLIST`: Custom base wordlist for scanning (default: SecList common.txt)
-- `--recursion-depth DEPTH`: Enable recursive search and specify depth (0 = infinite)
-- `--proxy PROXY`: Specify proxy to use (format: address:port)
-- `--aggressive-mode`: Enable aggressive scanning mode (uses external tools like FeroxBuster and CeWL)
-- `--ajax`: Use Ajax spider for analysis (for modern web applications)
-- `--report {html,json,xml}`: Specify report format (default: html)
+- `-u, --url URL`  
+  Specify a single URL or web endpoint to analyze (the entire associated domain will be scanned).
+- `-f, --file FILE`  
+  Provide a file containing URLs to analyze (one URL per line). If both `--url` and `--file` are specified, only `--url` will be used.
+- `-w, --wordlist WORDLIST`  
+  Custom wordlist for scanning directories and hidden files. If not specified, the default wordlist is used (`SecList common.txt`).
+- `--recursion-depth DEPTH`  
+  Set the maximum recursion depth for the scan (0 for infinite depth, default: 2).
+- `--proxy PROXY`  
+  Specify a proxy to use in the format `address:port` (e.g., `127.0.0.1:8080`).
+- `--aggressive-mode`  
+  Enable aggressive mode by using additional tools (e.g., FeroxBuster and CeWL) for a deeper scan (this may slow down execution).
+- `--spider`  
+  Use the standard ZAP spider for scanning the URL. This parameter is ignored if `--aggressive-mode` is not provided.
+- `--ajax`  
+  Use the Ajax spider for analyzing modern web applications with heavy JavaScript interactions.
+- `--report {html,json,xml}`  
+  Specify the format of the final report (default: html).
+
+> **Note:** If neither `--url` nor `--file` is provided, the tool will display a help message and exit.
 
 ### Examples
 
