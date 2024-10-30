@@ -15,7 +15,7 @@ help:
 
 
 # Install all dependencies
-install: update-all python-deps zap-deps feroxbuster-deps cewl-deps
+install: update-all python-deps zap-deps feroxbuster-deps cewl-deps sublister-deps
 	@echo "All dependencies installed."
 
 update-all:
@@ -41,6 +41,10 @@ feroxbuster-deps:
 cewl-deps:
 	@echo "Checking CeWL..."
 	@which cewl || (echo "Installing CeWL..." && sudo apt install cewl -y)
+
+sublister-deps:
+	@echo "Sublister CeWL..."
+	@which sublist3r || (echo "Installing sublist3r..." && sudo apt install sublist3r -y)
 
 # Clean up environment
 clean:

@@ -1,6 +1,38 @@
 import re
 import time, subprocess
+from art import text2art
+from urllib.parse import urlparse
+
 _URL_REGEX = r"(http[s]?://[^\s]+)"
+OUTPUT_DIR = "./results"
+
+def print_title():
+    banner = text2art("ZapBuster")
+    print(banner)
+    print("         # Coded by Asius22 - @Asius22")
+    print("")
+    
+def get_output_dir(url:str | None):
+    if str is not None:
+        output=f"{__OUTPUT_DIR}/{url}"
+        __OUTPUT_DIR = output
+    return __OUTPUT_DIR
+
+
+# Funzione per estrarre e normalizzare l'URL per ciascun tool
+def normalize_urls(raw_url):
+    parsed_url = urlparse(raw_url)
+    domain = parsed_url.netloc or parsed_url.path  # dominio senza schema
+    scheme = parsed_url.scheme or "http"  # schema predefinito "http" se assente
+    path = parsed_url.path if parsed_url.path else "/"  # percorso predefinito "/"
+
+    # URL per ciascun tool
+    sublist3r_url = domain  # Solo dominio per Sublist3r
+    cewl_url = f"{scheme}://{domain}{path}"  # URL completo per CeWL
+    feroxbuster_url = f"{scheme}://{domain}/"  # URL di base per Feroxbuster (per iniziare brute-forcing dalle directory root)
+
+    return sublist3r_url, cewl_url, feroxbuster_url
+
 
 def extract_url_from_file(filename):
     """for each line in the file gets all the urls
@@ -81,3 +113,5 @@ def merge_wordlist(file1, file2, output):
         
     return output
 
+if __name__ == "__main__":
+    print_title()

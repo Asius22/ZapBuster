@@ -1,7 +1,7 @@
 import subprocess
-import sys
+import sys, os
 
-def launch_ferox(url:str, wordlist:str, recursion_depth:str | None = None, proxy=None ):
+def launch_ferox(urls:set, wordlist:str, output_dir:str, recursion_depth:str | None = None, proxy:str=None, rate_limit:bool=False):
     """ launch feroxbuster with following flags:
     \n-A: random user agent
     \n-x pdf,js,html,php,txt,json,docx: search for file with specified extension
@@ -18,35 +18,57 @@ def launch_ferox(url:str, wordlist:str, recursion_depth:str | None = None, proxy
     Returns:
         res (set of strings): a list of all url finded by ferox process
     """
-
-    if url == "":
-        print("[FEROX] url cannot empty")
+    if len(urls) <= 0:
+        print("[FEROX] Some problem has verified")
         sys.exit(1)
-        
     if wordlist == "":
         print("[FEROX] Wordlist cannot be none")
         sys.exit(1)
         
-    args = ["feroxbuster", "-u", url, "-A", "-x", "pdf,js,html,php,txt,json,docx", "-k", "-r","-w", wordlist, "-E", "-g","-s", "200", "301", "401", "403", "405", "--no-state", "--silent"]  
+    url_file = f"{output_dir}/reachable_urls"
+    
+    with open(url_file, mode="w") as file:
+        file.writelines(f"{url}\n" for url in urls)
+        file.close()
+        
+    max_workers = int(os.cpu_count() * 0.7) # use 70% of CPU cores
+    
+    ferox_args = ["feroxbuster", "--stdin", "--parallel", f"{max_workers}", "-A", "-x", "pdf,js,html,php,txt,json,docx", "-k", "-r","-w", wordlist, "-E", "-g","-s", "200", "301", "401", "403", "405", "--no-state", "--silent"]  
     
     if proxy:
-        args.append("-p")
-        args.append(proxy)
+        ferox_args.append("-p")
+        ferox_args.append(proxy)
         
     if recursion_depth is not None:
-        args.append("-d")
-        args.append(recursion_depth)
+        ferox_args.append("-d")
+        ferox_args.append(recursion_depth)
         
-    process = subprocess.Popen(args, stdout=subprocess.PIPE, stdin=subprocess.DEVNULL, text=True)
-    res = set()
-    i = 0
-    for line in process.stdout:
-        if line != "":
-            res.add(line)
-            sys.stdout.write(line.strip() + "\n")
-            i+=1
-            if i == 10:
-                sys.stdout.flush()
-                i = 0
-    process.wait()
+    if rate_limit:
+        ferox_args.append("-t")
+        ferox_args.append("200")
+        ferox_args.append("-L")
+        ferox_args.append("5")
+        ferox_args.append("--thorough")
+        
+    cat_args= ["cat", url_file]
+    try:
+        cat_process = subprocess.Popen(cat_args, stdout=subprocess.PIPE, text=True)
+        ferox_process = subprocess.Popen(ferox_args, stdout=subprocess.PIPE, stdin=cat_process.stdout, text=True)
+        cat_process.stdout.close()
+        res = set()
+        i = 0
+        for line in ferox_process.stdout:
+            if line != "":
+                res.add(line)
+                sys.stdout.write(line.strip() + "\n")
+                i+=1
+                if i == 10:
+                    sys.stdout.flush()
+                    i = 0
+        ferox_process.wait()
+    except KeyboardInterrupt:
+        print("KeyboardInterrupt intercettato: passo alla prossima fase")
+        
+        ferox_process.terminate()
+        cat_process.terminate()
     return res
